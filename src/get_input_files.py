@@ -26,6 +26,7 @@ def request(element: str, author: str) -> bool:
         if vasp_input_files["INCAR"] == "" or vasp_input_files["KPOINTS"] == "":
             continue
         get_vasp_inputs(vasp_input_files, entry["entry_id"])
+        print(entry["entry_id"])
         return True
     return False
 
@@ -48,7 +49,8 @@ def get_vasp_inputs(vasp_input_files: dict, entry_id: str) -> None:
         file_url = url + vasp_input_files[file_name]
         response = requests.get(file_url)
         text = decompress_text(response, vasp_input_files[file_name])
-        text += "\nGGA = PE"
+        if "INCAR" in file_name:
+            text += "\nGGA = PE"
 
         if response.status_code == 200:
             file_path = os.path.join(output_dir, file_name)
