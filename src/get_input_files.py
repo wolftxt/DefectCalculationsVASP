@@ -23,7 +23,7 @@ def request(element: str, author: str) -> bool:
     data = response.json()
     for entry in data["data"]:
         vasp_input_files = get_file_names(entry["files"])
-        if vasp_input_files["INCAR"] == "" or vasp_input_files["KPOINTS"] == "":
+        if vasp_input_files["INCAR"] == "" or vasp_input_files["KPOINTS"] == "" or vasp_input_files["POSCAR"] == "":
             continue
         get_vasp_inputs(vasp_input_files, entry["entry_id"])
         print(entry["entry_id"])
@@ -32,7 +32,7 @@ def request(element: str, author: str) -> bool:
 
 
 def get_file_names(file_list: list) -> dict:
-    vasp_input_files = {"INCAR": "", "KPOINTS": ""}
+    vasp_input_files = {"INCAR": "", "KPOINTS": "", "POSCAR": ""}
     for file_path in file_list:
         file_name = file_path.split("/")[-1]
         for key in vasp_input_files:

@@ -2,8 +2,10 @@ import csv
 import os
 import shutil
 
+import numpy as np
 from ase.build import bulk
 from ase.calculators.vasp import Vasp
+from ase.io import read
 from ase.optimize import BFGS
 
 from get_input_files import request
@@ -23,14 +25,29 @@ def get_molecule_name(molecule) -> str:
         result += symbol + str(count)
     return result
 
+def get_kpts_density() -> float:
+    try:
+        atoms = read("POSCAR", format="vasp")
+    except:
+        return 3 # Value that should result in a 4 4 4 kpoints file for 32 atom structure
+
+    cell = atoms.get_cell()
+    volume = abs(np.dot(cell[0], np.cross(cell[1], cell[2])))
+    with open('KPOINTS', 'r') as f:
+        lines = f.readlines()
+    kpts = [int(i) for i in lines[4].split()]
+    num_kpoints = np.prod(kpts)
+    return num_kpoints / volume
+
 def run(element: str, defect: str) -> list:
+    kpts_density = get_kpts_density()
     fcc = bulk(element, crystalstructure="fcc", a=4, cubic=True)
     super_cell = fcc.repeat((2, 2, 2))
     if defect != "":
         super_cell[0].symbol = defect
     super_cell.calc = Vasp()
     super_cell.calc.read_incar("INCAR")
-    super_cell.calc.kpts = [1, 1, 1]
+    super_cell.calc.kpts = {"density" : kpts_density}
 
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.02)
@@ -63,9 +80,11 @@ def main():
     for name in AUTHORS_LIST:
         if request(element, name):
             row = [name, *run(element, "")]
+            result.append(row)
             move_all_files(name, False)
+
             request(element, name)
-            row.append(run(element, defect))
+            row = [name, *run(element, defect)]
             result.append(row)
             move_all_files(name, True)
     with open('energies.csv', mode='w', newline='') as file:
