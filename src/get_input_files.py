@@ -75,4 +75,3 @@ def decompress_text(response, file_name: str) -> str:
         )
     )
     return text
-

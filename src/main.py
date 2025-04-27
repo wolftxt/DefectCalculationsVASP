@@ -1,13 +1,15 @@
+import csv
 import os
 import shutil
-import csv
+
 from ase.build import bulk
 from ase.calculators.vasp import Vasp
 from ase.optimize import BFGS
 
 from get_input_files import request
 
-AUTHORS_LIST = ["Stefano Curtarolo", "Chris Wolverton", "Materials Project", "Miguel Marques", "Bjoern Bieniek", "Oliver Hoffmann", "Kurt Lejaeghere"]
+#AUTHORS_LIST = ["Stefano Curtarolo", "Chris Wolverton", "Materials Project", "Miguel Marques", "Bjoern Bieniek", "Oliver Hoffmann", "Kurt Lejaeghere"]
+AUTHORS_LIST = ["Stefano Curtarolo"]
 
 def get_molecule_name(molecule) -> str:
     atoms = {}
@@ -28,6 +30,7 @@ def run(element: str, defect: str) -> list:
         super_cell[0].symbol = defect
     super_cell.calc = Vasp()
     super_cell.calc.read_incar("INCAR")
+    super_cell.calc.kpts = [1, 1, 1]
 
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.02)
@@ -60,11 +63,9 @@ def main():
     for name in AUTHORS_LIST:
         if request(element, name):
             row = [name, *run(element, "")]
-            result.append(row)
             move_all_files(name, False)
-
             request(element, name)
-            row = [name, *run(element, defect)]
+            row.append(run(element, defect))
             result.append(row)
             move_all_files(name, True)
     with open('energies.csv', mode='w', newline='') as file:
