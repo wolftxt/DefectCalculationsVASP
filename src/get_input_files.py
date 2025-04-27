@@ -2,6 +2,7 @@ import bz2
 import gzip
 import lzma
 import os
+import re
 
 import requests
 
@@ -50,6 +51,7 @@ def get_vasp_inputs(vasp_input_files: dict, entry_id: str) -> None:
         response = requests.get(file_url)
         text = decompress_text(response, vasp_input_files[file_name])
         if "INCAR" in file_name:
+            text = re.sub(r'^\s*(GGA|METAGGA|XC|NBANDS)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
             text += "\nGGA = PE"
 
         if response.status_code == 200:

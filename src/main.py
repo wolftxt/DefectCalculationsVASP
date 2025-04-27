@@ -3,6 +3,7 @@ import os
 import shutil
 
 import numpy as np
+from ase import Atoms
 from ase.build import bulk
 from ase.calculators.vasp import Vasp
 from ase.io import read
@@ -10,8 +11,7 @@ from ase.optimize import BFGS
 
 from get_input_files import request
 
-#AUTHORS_LIST = ["Stefano Curtarolo", "Chris Wolverton", "Materials Project", "Miguel Marques", "Bjoern Bieniek", "Oliver Hoffmann", "Kurt Lejaeghere"]
-AUTHORS_LIST = ["Stefano Curtarolo"]
+AUTHORS_LIST = ["Stefano Curtarolo", "Chris Wolverton", "Materials Project", "Miguel Marques", "Bjoern Bieniek", "Oliver Hoffmann", "Kurt Lejaeghere"]
 
 def get_molecule_name(molecule) -> str:
     atoms = {}
@@ -42,13 +42,12 @@ def get_kpts_density() -> float:
 def run(element: str, defect: str) -> list:
     kpts_density = get_kpts_density()
     fcc = bulk(element, crystalstructure="fcc", a=4, cubic=True)
-    super_cell = fcc.repeat((2, 2, 2))
+    super_cell: Atoms = fcc.repeat((2, 2, 2))
     if defect != "":
         super_cell[0].symbol = defect
     super_cell.calc = Vasp()
     super_cell.calc.read_incar("INCAR")
     super_cell.calc.kpts = {"density" : kpts_density}
-
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.02)
     return [get_molecule_name(super_cell), super_cell.get_potential_energy()]
@@ -93,4 +92,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
