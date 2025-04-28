@@ -14,7 +14,6 @@ def request(element: str, author: str) -> bool:
         "query": {
             "results.method.simulation.program_name:any": ["VASP"],
             "authors.name:any": [author],
-            "results.properties.available_properties:all": ["geometry_optimization"],
             "results.material.elements_exclusive": element,
         },
         "pagination": {"page_size": 10, "page": 1},
@@ -24,16 +23,17 @@ def request(element: str, author: str) -> bool:
     data = response.json()
     for entry in data["data"]:
         vasp_input_files = get_file_names(entry["files"])
-        if vasp_input_files["INCAR"] == "" or vasp_input_files["KPOINTS"] == "" or vasp_input_files["POSCAR"] == "":
+        if vasp_input_files["INCAR"] == "" or vasp_input_files["KPOINTS"] == "":
             continue
         get_vasp_inputs(vasp_input_files, entry["entry_id"])
         print(entry["entry_id"])
         return True
+    print(f"Failed to find valid files from {author}")
     return False
 
 
 def get_file_names(file_list: list) -> dict:
-    vasp_input_files = {"INCAR": "", "KPOINTS": "", "POSCAR": ""}
+    vasp_input_files = {"INCAR": "", "KPOINTS": ""}
     for file_path in file_list:
         file_name = file_path.split("/")[-1]
         for key in vasp_input_files:
@@ -51,7 +51,8 @@ def get_vasp_inputs(vasp_input_files: dict, entry_id: str) -> None:
         response = requests.get(file_url)
         text = decompress_text(response, vasp_input_files[file_name])
         if "INCAR" in file_name:
-            text = re.sub(r'^\s*(GGA|METAGGA|XC|NBANDS)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+            text = re.sub(r'^\s*(GGA|METAGGA|XC|NBANDS|ISPIN|MAGMOM|ICHARG)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+            text += "\nISPIN = 1"
             text += "\nGGA = PE"
 
         if response.status_code == 200:
