@@ -27,7 +27,7 @@ def get_molecule_name(molecule) -> str:
     print(result)
     return result
 
-def run(element: str, defect: str) -> list:
+def run(element: str, defect: str, name) -> list:
     if defect != "":
         fcc = bulk(element, crystalstructure="fcc", a=4, cubic=True)
         super_cell = fcc.repeat((2, 2, 2))
@@ -39,12 +39,16 @@ def run(element: str, defect: str) -> list:
             super_cell = bulk(element, 'diamond', a=5.658)
         else:
             super_cell = bulk(element, 'bcc', a=4, cubic=False)
+    if not request(element, name, len(super_cell)):
+        return ["", ""]
     super_cell.calc = Vasp()
     super_cell.calc.read_incar("INCAR")
     super_cell.calc.kpts = tuple(kptdensity2monkhorstpack(super_cell, 5, False))
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.02)
-    return [get_molecule_name(super_cell), super_cell.get_potential_energy()]
+    result = [get_molecule_name(super_cell), super_cell.get_potential_energy()]
+    move_all_files(name, element + defect)
+    return result
 
 def move_all_files(author_name: str, folder_name: str) -> None:
     author_name = author_name.lower().replace(" ", "_")
@@ -70,21 +74,10 @@ def main():
     defect = "Ge"
     for name in AUTHORS_LIST:
         row = [name]
-        if request(element, name):
-            row.extend(run(element, defect))
-            move_all_files(name, element + defect)
-
-            request(element, name)
-            row.extend(run(element, ""))
-            move_all_files(name, element)
-        else:
-            row.extend(["", "", "", ""])
-        if request(defect, name):
-            row.extend(run(defect, ""))
-            move_all_files(name, defect)
-
+        row.extend(run(element, defect, name))
+        row.extend(run(element, "", name))
+        row.extend(run(defect, "", name))
         result.append(row)
-        result.append([])
     with open('energies.csv', mode='w', newline='') as file:
         csv_writer = csv.writer(file)
         csv_writer.writerows(result)
