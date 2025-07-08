@@ -12,7 +12,7 @@ from get_input_files import request
 FCC = ["Al"]
 DIAMOND = ["Ge"]
 
-AUTHORS_LIST = ["Oliver Hofmann"]
+AUTHORS_LIST = ["Materials Project"]
 
 def get_molecule_name(molecule) -> str:
     atoms = {}
@@ -63,6 +63,12 @@ def move_all_files(author_name: str, folder_name: str) -> None:
             continue
         shutil.move(file_path, os.path.join(new_folder, file))
 
+def calculate(name: str, element: str, defect: str) -> list:
+    if not request(element, name):
+        return ["", ""]
+    result = run(element, defect)
+    move_all_files(name, element)
+    return result
 
 def main():
     result = [["Settings",  "Molecule", "Energy"]]
@@ -70,14 +76,9 @@ def main():
     defect = "Ge"
     for name in AUTHORS_LIST:
         row = [name]
-        if request(element, name):
-            row.extend(run(element, ""))
-            move_all_files(name, element)
-        else:
-            row.extend(["", ""])
-        if request(defect, name):
-            row.extend(run(defect, ""))
-            move_all_files(name, defect)
+        row.extend(calculate(name, element, defect))
+        row.extend(calculate(name, element, ""))
+        row.extend(calculate(name, defect, ""))
 
         result.append(row)
         result.append([])
