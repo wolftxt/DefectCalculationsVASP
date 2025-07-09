@@ -8,16 +8,6 @@ import requests
 
 BASE_URL = "https://nomad-lab.eu/prod/v1/api/v1"
 
-def clean_vasp_output():
-    files_to_remove = ["CHGCAR", "WAVECAR", "IBZKPT", "OSZICAR", "PCDAT", "XDATCAR", "EIGENVAL", "DOSCAR", "LOCPOT", "CHG"]
-
-    for f in files_to_remove:
-        if os.path.exists(f):
-            os.remove(f)
-
-    if os.path.exists("OUTCAR"):
-         os.remove("OUTCAR")
-
 def set_incar_tag(setting: str, value: str):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     incar_path = os.path.join(script_dir, 'INCAR')

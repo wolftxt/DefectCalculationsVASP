@@ -8,7 +8,7 @@ from ase.calculators.calculator import kptdensity2monkhorstpack
 from ase.calculators.vasp import Vasp
 from ase.optimize import BFGS
 
-from get_input_files import request, set_incar_tag, clean_vasp_output
+from get_input_files import request, set_incar_tag
 
 FCC = ["Al"]
 DIAMOND = ["Ge"]
@@ -31,7 +31,6 @@ def get_molecule_name(molecule) -> str:
 def set_calc(cell: Atoms, kpts: int, ismear: float) -> None:
     set_incar_tag("ISMEAR", str(ismear))
     set_incar_tag("LWAVE", ".FALSE.")
-    set_incar_tag("LAECHG", ".FALSE.")
     set_incar_tag("LCHARG", ".FALSE.")
     cell.calc = Vasp()
     cell.calc.read_incar("INCAR")
@@ -56,12 +55,10 @@ def run(element: str, defect: str, kpts: int) -> list:
     set_calc(super_cell, kpts, ismear)
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.05)
-    clean_vasp_output()
 
     set_calc(super_cell, kpts, ismear)
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.01)
-    clean_vasp_output()
 
     set_calc(super_cell, kpts, -5)
     return [get_molecule_name(super_cell), super_cell.get_potential_energy()]
