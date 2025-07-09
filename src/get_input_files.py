@@ -8,6 +8,27 @@ import requests
 
 BASE_URL = "https://nomad-lab.eu/prod/v1/api/v1"
 
+def set_incar_tag(setting: str, value: str):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    incar_path = os.path.join(script_dir, 'INCAR')
+
+    if not os.path.exists(incar_path):
+        print(f"Error: INCAR file not found at {incar_path}")
+        with open(incar_path, 'w') as f:
+            pass
+        print("An empty INCAR file has been created.")
+
+    with open(incar_path, 'r') as f:
+        content = f.read()
+    pattern = re.compile(
+        rf"^\s*{re.escape(setting)}\s*=.*\n?",
+        re.MULTILINE | re.IGNORECASE
+    )
+    content = pattern.sub("", content)
+    new_content = content.strip() + f"\n{setting.upper()} = {value}\n"
+    with open(incar_path, 'w') as f:
+        f.write(new_content)
+
 
 def request(element: str, author: str) -> bool:
     try:
@@ -68,7 +89,7 @@ def get_vasp_inputs(vasp_input_files: dict, entry_id: str) -> bool:
         if "INCAR" in file_name:
             if not verify_INCAR(text):
                 return False
-            text = re.sub(r'^\s*(NBANDS|ISPIN|MAGMOM|ICHARG|METAGGA)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+            text = re.sub(r'^\s*(NBANDS|ISPIN|MAGMOM|ICHARG)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
             text += "\nISPIN = 1"
             if not re.search(r'^\s*(XC|GGA|METAGGA)\s*=.*$', text, re.IGNORECASE | re.MULTILINE):
                 text += "\nGGA = PE"
