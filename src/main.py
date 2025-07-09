@@ -28,7 +28,8 @@ def get_molecule_name(molecule) -> str:
     print(result)
     return result
 
-def set_calc(cell: Atoms, kpts: int) -> None:
+def set_calc(cell: Atoms, kpts: int, ismear: float) -> None:
+    set_incar_tag("ISMEAR", str(ismear))
     set_incar_tag("LWAVE", ".FALSE.")
     set_incar_tag("LCHARG", ".FALSE.")
     cell.calc = Vasp()
@@ -37,28 +38,29 @@ def set_calc(cell: Atoms, kpts: int) -> None:
 
 def run(element: str, defect: str, kpts: int) -> list:
     if defect != "":
+        ismear = 1  # Bad temporary measure to ensure correct ismear
         fcc = bulk(element, crystalstructure="fcc", a=4, cubic=True)
         super_cell = fcc.repeat((2, 2, 2))
         super_cell[0].symbol = defect
     else:
         if element in FCC:
-            set_incar_tag("ISMEAR", "1") # Bad temporary measure to ensure correct ismear
+            ismear = 1 # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'fcc', a=4, cubic=False)
         elif element in DIAMOND:
-            set_incar_tag("ISMEAR", "0")  # Bad temporary measure to ensure correct ismear
+            ismear = 0  # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'diamond', a=5.658)
         else:
+            ismear = 1  # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'bcc', a=4, cubic=False)
-    set_calc(super_cell, kpts)
+    set_calc(super_cell, kpts, ismear)
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.05)
 
-    set_calc(super_cell, kpts)
+    set_calc(super_cell, kpts, ismear)
     optimizer = BFGS(super_cell)
     optimizer.run(fmax=0.01)
 
-    set_incar_tag("ISMEAR", "-5")
-    set_calc(super_cell, kpts)
+    set_calc(super_cell, kpts, -5)
     return [get_molecule_name(super_cell), super_cell.get_potential_energy()]
 
 def move_all_files(author_name: str, folder_name: str, kpts: int) -> None:
