@@ -2,12 +2,13 @@ import csv
 import os
 import shutil
 
+from ase import Atoms
 from ase.build import bulk
 from ase.calculators.calculator import kptdensity2monkhorstpack
 from ase.calculators.vasp import Vasp
 from ase.optimize import BFGS
 
-from get_input_files import request
+from get_input_files import request, set_incar_tag
 
 FCC = ["Al"]
 DIAMOND = ["Ge"]
@@ -27,26 +28,41 @@ def get_molecule_name(molecule) -> str:
     print(result)
     return result
 
-def run(element: str, defect: str) -> list:
+def set_calc(cell: Atoms, kpts: int) -> None:
+    set_incar_tag("LWAVE", ".FALSE.")
+    set_incar_tag("LCHARG", ".FALSE.")
+    cell.calc = Vasp()
+    cell.calc.read_incar("INCAR")
+    cell.calc.kpts = tuple(kptdensity2monkhorstpack(cell, kpts, False))
+
+def run(element: str, defect: str, kpts: int) -> list:
     if defect != "":
         fcc = bulk(element, crystalstructure="fcc", a=4, cubic=True)
         super_cell = fcc.repeat((2, 2, 2))
         super_cell[0].symbol = defect
     else:
         if element in FCC:
+            set_incar_tag("ISMEAR", "1") # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'fcc', a=4, cubic=False)
         elif element in DIAMOND:
+            set_incar_tag("ISMEAR", "0")  # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'diamond', a=5.658)
         else:
             super_cell = bulk(element, 'bcc', a=4, cubic=False)
-    super_cell.calc = Vasp()
-    super_cell.calc.read_incar("INCAR")
-    super_cell.calc.kpts = tuple(kptdensity2monkhorstpack(super_cell, 5, False))
+    set_calc(super_cell, kpts)
     optimizer = BFGS(super_cell)
-    optimizer.run(fmax=0.02)
+    optimizer.run(fmax=0.05)
+
+    set_calc(super_cell, kpts)
+    optimizer = BFGS(super_cell)
+    optimizer.run(fmax=0.01)
+
+    set_incar_tag("ISMEAR", "-5")
+    set_calc(super_cell, kpts)
     return [get_molecule_name(super_cell), super_cell.get_potential_energy()]
 
-def move_all_files(author_name: str, folder_name: str) -> None:
+def move_all_files(author_name: str, folder_name: str, kpts: int) -> None:
+    author_name += str(kpts)
     author_name = author_name.lower().replace(" ", "_")
     current_dir = os.getcwd()
     destination_folder = os.path.join(current_dir, author_name)
@@ -63,25 +79,26 @@ def move_all_files(author_name: str, folder_name: str) -> None:
             continue
         shutil.move(file_path, os.path.join(new_folder, file))
 
-def calculate(name: str, element: str, defect: str) -> list:
+def calculate(name: str, element: str, defect: str, kpts: int) -> list:
     if not request(element, name):
         return ["", ""]
-    result = run(element, defect)
-    move_all_files(name, element)
+    result = run(element, defect, kpts)
+    move_all_files(name, element + defect, kpts)
     return result
 
 def main():
-    result = [["Settings",  "Molecule", "Energy"]]
+    result = [["Settings", "KPTS in points per Ang^-1",  "Molecule", "Energy"]]
     element = "Al"
     defect = "Ge"
     for name in AUTHORS_LIST:
-        row = [name]
-        row.extend(calculate(name, element, defect))
-        row.extend(calculate(name, element, ""))
-        row.extend(calculate(name, defect, ""))
+        for kpts in range(5, 6, 5):
+            row = [name, kpts]
+            row.extend(calculate(name, element, defect, kpts))
+            row.extend(calculate(name, element, "", kpts))
+            row.extend(calculate(name, defect, "", kpts))
 
-        result.append(row)
-        result.append([])
+            result.append(row)
+            result.append([])
     with open('energies.csv', mode='w', newline='') as file:
         csv_writer = csv.writer(file)
         csv_writer.writerows(result)
