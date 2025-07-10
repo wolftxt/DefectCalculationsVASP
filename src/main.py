@@ -31,6 +31,7 @@ def get_molecule_name(molecule) -> str:
 def set_calc(cell: Atoms, kpts: int, ismear: float) -> None:
     set_incar_tag("ISMEAR", str(ismear))
     set_incar_tag("LWAVE", ".FALSE.")
+    set_incar_tag("LAECHG", ".FALSE.")
     set_incar_tag("LCHARG", ".FALSE.")
     cell.calc = Vasp()
     cell.calc.read_incar("INCAR")
@@ -75,9 +76,9 @@ def move_all_files(author_name: str, folder_name: str, kpts: int) -> None:
     os.makedirs(new_folder, exist_ok=True)
     for file in os.listdir(current_dir):
         file_path = os.path.join(current_dir, file)
-        if ".py" in file or not os.path.isfile(file_path):
+        if not os.path.isfile(file_path):
             continue
-        if file == "run.sh":
+        if ".py" in file or ".sh" in file or ".csv" in file:
             continue
         shutil.move(file_path, os.path.join(new_folder, file))
 
@@ -93,7 +94,7 @@ def main():
     element = "Al"
     defect = "Ge"
     for name in AUTHORS_LIST:
-        for kpts in range(5, 6, 5):
+        for kpts in range(8, 21, 3):
             row = [name, kpts]
             row.extend(calculate(name, element, defect, kpts))
             row.extend(calculate(name, element, "", kpts))
@@ -101,9 +102,9 @@ def main():
 
             result.append(row)
             result.append([])
-    with open('energies.csv', mode='w', newline='') as file:
-        csv_writer = csv.writer(file)
-        csv_writer.writerows(result)
+            with open('energies.csv', mode='w', newline='') as file: # Save more often so results aren't deleted in the case of a crash
+                csv_writer = csv.writer(file)
+                csv_writer.writerows(result)
 
 if __name__ == '__main__':
     main()
