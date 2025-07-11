@@ -89,10 +89,8 @@ def get_vasp_inputs(vasp_input_files: dict, entry_id: str) -> bool:
         if "INCAR" in file_name:
             if not verify_INCAR(text):
                 return False
-            text = re.sub(r'^\s*(NBANDS|ISPIN|MAGMOM|ICHARG)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+            text = re.sub(r'^\s*(NBANDS|ISPIN|MAGMOM|ICHARG|XC|GGA|METAGGA)\s*=.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
             text += "\nISPIN = 1"
-            if not re.search(r'^\s*(XC|GGA|METAGGA)\s*=.*$', text, re.IGNORECASE | re.MULTILINE):
-                text += "\nGGA = PE"
 
         if response.status_code == 200:
             file_path = os.path.join(output_dir, file_name)

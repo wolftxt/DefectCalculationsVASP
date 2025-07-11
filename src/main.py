@@ -29,12 +29,14 @@ def get_molecule_name(molecule) -> str:
     return result
 
 def set_calc(cell: Atoms, kpts: int, ismear: float) -> None:
+    set_incar_tag("LASPH", ".TRUE.")
     set_incar_tag("ISMEAR", str(ismear))
     set_incar_tag("LWAVE", ".FALSE.")
     set_incar_tag("LAECHG", ".FALSE.")
     set_incar_tag("LCHARG", ".FALSE.")
     cell.calc = Vasp()
     cell.calc.read_incar("INCAR")
+    cell.calc.xc = "SCAN"
     cell.calc.kpts = tuple(kptdensity2monkhorstpack(cell, kpts, False))
 
 def run(element: str, defect: str, kpts: int) -> list:
@@ -54,11 +56,11 @@ def run(element: str, defect: str, kpts: int) -> list:
             ismear = 1  # Bad temporary measure to ensure correct ismear
             super_cell = bulk(element, 'bcc', a=4, cubic=False)
     set_calc(super_cell, kpts, ismear)
-    optimizer = BFGS(super_cell)
+    optimizer = BFGS(super_cell, maxstep=500)
     optimizer.run(fmax=0.05)
 
     set_calc(super_cell, kpts, ismear)
-    optimizer = BFGS(super_cell)
+    optimizer = BFGS(super_cell, maxstep=500)
     optimizer.run(fmax=0.01)
 
     set_calc(super_cell, kpts, -5)
